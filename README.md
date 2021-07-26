@@ -10,23 +10,21 @@ This crate requires nightly:
 use masala::curry;
 
 #[curry]
-fn add(a: isize, b: isize) {
-    a + b
+fn mul<T: Multiple>(a: T, b: T) -> T {
+    a mul b
+}
+
+fn flip<T>(a: Fn(T), b: T, t:T) -> T {
+    a(c, b)
 }
 
 fn main() {
     println!("{}", add(33)(42));
+    println!("{}", flip(add)(33)(42));
 }
 ```
 
 ## TODO
 
-- [ ] Allow for Generics
-- [ ] Allow for curry functions to be written similar to:
-
-```rust
-#[curry]
-fn demo<T>(a: T) -> (b: T) -> (c: T) -> T {
-    a + b + c
-}
-```
+- [x] Allow for Generics
+- [ ] ~Allow for curry functions to be written similar to~

@@ -1,8 +1,13 @@
 #![feature(type_alias_impl_trait, min_type_alias_impl_trait)]
 
 #[masala::curry]
-fn kestrel(a: isize, _b: isize) -> isize {
-    a
+pub fn bluebird<T>(b: fn(T) -> T, c: fn(T) -> T, a: T) -> T {
+    b(c(a))
+}
+
+#[masala::curry]
+fn kestrel<T: Clone>(a: T, _b: T) -> T {
+    a.clone()
 }
 
 #[masala::curry]

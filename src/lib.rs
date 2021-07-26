@@ -22,7 +22,7 @@
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::punctuated::Punctuated;
-use syn::{parse_macro_input, Block, FnArg, ItemFn, Pat, ReturnType, Type};
+use syn::{parse_macro_input, Block, FnArg, ItemFn, Pat, ReturnType, Type, TypeGenerics};
 
 #[proc_macro_attribute]
 pub fn curry(_attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -33,6 +33,7 @@ pub fn curry(_attr: TokenStream, item: TokenStream) -> TokenStream {
 fn cook_curry(parsed: ItemFn) -> proc_macro2::TokenStream {
     let fn_body = parsed.block;
     let sig = parsed.sig;
+    let (impl_generics, ty_generics, _) = sig.generics.split_for_impl();
     let vis = parsed.vis;
     let fn_name = sig.ident;
     let fn_args = sig.inputs;
@@ -49,6 +50,7 @@ fn cook_curry(parsed: ItemFn) -> proc_macro2::TokenStream {
         &arg_types[1..],
         extract_return_type(fn_return_type),
         &fn_name,
+        ty_generics.clone(),
     );
     let return_type = format_ident!(
         "{}{}",
@@ -58,7 +60,7 @@ fn cook_curry(parsed: ItemFn) -> proc_macro2::TokenStream {
 
     quote! {
         #(#type_aliases);* ;
-        #vis fn #fn_name (#first_ident: #first_type) -> #return_type {
+        #vis fn #fn_name #impl_generics (#first_ident: #first_type) -> #return_type #ty_generics {
             #curried_body ;
         }
     }
@@ -103,15 +105,16 @@ fn generate_type_aliases(
     fn_arg_types: &[Box<Type>],
     fn_return_type: Box<Type>,
     fn_name: &syn::Ident,
+    type_generics: TypeGenerics,
 ) -> Vec<proc_macro2::TokenStream> {
     let type_t0 = format_ident!("{}T0", title_case(&fn_name.to_string()));
-    let mut type_aliases = vec![quote! { type #type_t0 = #fn_return_type}];
+    let mut type_aliases = vec![quote! { type #type_t0 #type_generics = #fn_return_type}];
     for (i, t) in (1..).zip(fn_arg_types.into_iter().rev()) {
         let func = title_case(&fn_name.to_string());
         let p = format_ident!("{}{}", func, format!("T{}", i - 1));
         let n = format_ident!("{}{}", func, format!("T{}", i));
         type_aliases.push(quote! {
-            type #n = impl Fn(#t) -> #p
+            type #n #type_generics = impl Fn(#t) -> #p #type_generics
         });
     }
     type_aliases
