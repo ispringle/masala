@@ -1,3 +1,4 @@
+#![allow(incomplete_features)]
 ///# Masala
 ///
 /// An autocurrying macro for Rust.
@@ -6,24 +7,63 @@
 ///
 /// This crate requires nightly:
 ///
-///```rust
-///#![feature(type_alias_impl_trait, min_type_alias_impl_trait)]
-///use masala::curry;
+///```
+/// #![feature(type_alias_impl_trait, min_type_alias_impl_trait)]
+/// use masala::curry;
 ///
-///#[curry]
-///fn add(a: isize, b: isize) -> isize {
+/// #[curry]
+/// fn add(a: isize, b: isize) -> isize {
 ///    a + b
-///}
+/// }
 ///
-///fn main() {
+/// fn main() {
 ///    println!("{}", add(33)(42));
-///}
+/// }
 ///```
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::punctuated::Punctuated;
 use syn::{parse_macro_input, Block, FnArg, ItemFn, Pat, ReturnType, Type, TypeGenerics};
 
+/// Curry is a proc_macro. It takes a Rust function written like:
+/// ```
+/// #![feature(type_alias_impl_trait, min_type_alias_impl_trait)]
+/// use masala::curry;
+///
+/// #[curry]
+/// fn add(a: isize, b:isize) -> isize {
+///     a + b
+/// }
+///
+/// fn main() {
+///     let add_10 = add(10);
+///     let x = 23;
+///     println!("Ten plus {} is {}", x, add_10(x));
+/// }
+/// ```
+/// This macro supports generics, to an extent. For example this is valid:
+/// ```
+/// #![feature(type_alias_impl_trait, min_type_alias_impl_trait)]
+/// use std::ops::Add;
+/// use masala::curry;
+///
+/// #[curry]
+/// fn add<T: Add + Add<Output = T> + Clone>(a: T, b:T) -> T {
+///     a.clone() + b
+/// }
+/// ```
+/// The macro does expect that a function returns _something_. A function with
+/// no return will not compile. To take another function as a parameter follow
+/// this pattern:
+/// ```
+/// #![feature(type_alias_impl_trait, min_type_alias_impl_trait)]
+/// use masala::curry;
+///
+/// #[curry]
+/// fn psi<T: Clone>(a: fn(T, T) -> T, b: fn(T) -> T, c: T, d: T) -> T {
+///     a(b(c.clone()), b(d))
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn curry(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let parsed = parse_macro_input!(item as ItemFn);
